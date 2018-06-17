@@ -37,17 +37,17 @@ perform_migration() {
     ${GIT[@]} add --all
     ${GIT[@]} commit -m "Apply migration $migration"
 
-    while read file
+    while IFS= read -r -d '' filename
     do
-      rm "$SYSMIGRATE_PREFIX/$file"
+      rm "$SYSMIGRATE_PREFIX/$filename"
     done < $TRACKED_FILES_PATH
 
-    ${GIT[@]} ls-files > $TRACKED_FILES_PATH
+    ${GIT[@]} ls-files -z > $TRACKED_FILES_PATH
 
-    while read file
+    while IFS= read -r -d '' filename
     do
-      mkdir -p "$(dirname "$SYSMIGRATE_PREFIX/$file")"
-      cp "$MIRROR_DIR/$file" "$SYSMIGRATE_PREFIX/$file"
+      mkdir -p "$(dirname "$SYSMIGRATE_PREFIX/$filename")"
+      cp "$MIRROR_DIR/$filename" "$SYSMIGRATE_PREFIX/$filename"
     done < $TRACKED_FILES_PATH
   fi
   
@@ -62,8 +62,10 @@ perform_migrations() {
 
   trap cleanup EXIT
 
-  for migration in $(ls -1 $MIGRATIONS_DIR)
+  find "$MIGRATIONS_DIR" -type d -depth 1 -print0 | while IFS= read -r -d '' filename
   do
+    local migration=$(basename "$filename")
+
     print_status "Performing migration $migration"
 
     if [ -f "$PERFORMED_MIGRATIONS_DIR/$migration" ]
