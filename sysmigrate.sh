@@ -39,7 +39,7 @@ perform_migration() {
 
     while IFS= read -r -d '' filename
     do
-      rm "$SYSMIGRATE_PREFIX/$filename"
+      rm -- "$SYSMIGRATE_PREFIX/$filename"
     done < $TRACKED_FILES_PATH
 
     ${GIT[@]} ls-files -z > $TRACKED_FILES_PATH
@@ -47,7 +47,7 @@ perform_migration() {
     while IFS= read -r -d '' filename
     do
       mkdir -p "$(dirname "$SYSMIGRATE_PREFIX/$filename")"
-      cp "$MIRROR_DIR/$filename" "$SYSMIGRATE_PREFIX/$filename"
+      cp -- "$MIRROR_DIR/$filename" "$SYSMIGRATE_PREFIX/$filename"
     done < $TRACKED_FILES_PATH
   fi
   
@@ -85,7 +85,7 @@ reset() {
   printf "type y or yes to confirm> "
   read answer
 
-  if [ "$answer" = "y" ] || [ "$answer" = "yes" ]
+  if [[ "$answer" == "y" ]] || [[ "$answer" == "yes" ]]
   then
     print_status "Removing state"
     rm -rf "$RUNTIME_DIR"
