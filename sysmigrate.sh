@@ -10,6 +10,18 @@ PERFORMED_MIGRATIONS_DIR="$RUNTIME_DIR/performed-migrations"
 
 GIT=(git -C "$MIRROR_DIR")
 
+print_help() {
+  echo "Reproducible migrations for GNU/Linux systems"
+  echo ""
+  echo "USAGE:"
+  echo "    $0 [SUBCOMMAND]"
+  echo ""
+  echo "SUBCOMMANDS:"
+  echo "    run        Runs all available migrations"
+  echo "    reset      Resets all state (performed migrations, mirror, list of tracked files)"
+  echo "    help       Prints help information"
+}
+
 print_status() {
   echo "$(tput bold)==> $1...$(tput sgr0)"
 }
@@ -45,45 +57,85 @@ perform_migration() {
   fi
 }
 
+perform_migrations() {
+  run_checks
+
+  trap cleanup EXIT
+
+  for migration in $(ls -1 $MIGRATIONS_DIR)
+  do
+    print_status "Performing migration $migration"
+
+    if [ -f "$PERFORMED_MIGRATIONS_DIR/$migration" ]
+    then
+      echo "Migration already performed. Skipping."
+      continue
+    fi
+
+    perform_migration "$migration"
+
+    touch "$PERFORMED_MIGRATIONS_DIR/$migration"
+  done
+}
+
+reset() {
+  echo "Are you sure you want to reset all state?"
+  printf "type y or yes to confirm> "
+  read answer
+
+  if [ "$answer" = "y" ] || [ "$answer" = "yes" ]
+  then
+    print_status "Removing state"
+    rm -rf "$RUNTIME_DIR"
+  fi
+}
+
+run_checks() {
+  mkdir -p "$RUNTIME_DIR"
+  mkdir -p "$MIRROR_DIR"
+  mkdir -p "$MIGRATIONS_DIR"
+  mkdir -p "$PERFORMED_MIGRATIONS_DIR"
+
+  if [ ! -f "$TRACKED_FILES_PATH" ]
+  then
+    touch "$TRACKED_FILES_PATH"
+  fi
+
+  if [ ! -d "$MIRROR_DIR/.git" ]
+  then
+    print_status "Initializing mirror git instance"
+
+    ${GIT[@]} init
+    ${GIT[@]} config user.name "$USER"
+    ${GIT[@]} config user.email "$USER@$HOSTNAME"
+    ${GIT[@]} config commit.gpgsign "false"
+    ${GIT[@]} commit --allow-empty -m "Initial commit"
+  fi
+}
+
 cleanup() {
   ${GIT[@]} clean -xfd > /dev/null
   ${GIT[@]} reset --hard > /dev/null
 }
 
-trap cleanup EXIT
-
-mkdir -p "$RUNTIME_DIR"
-mkdir -p "$MIRROR_DIR"
-mkdir -p "$MIGRATIONS_DIR"
-mkdir -p "$PERFORMED_MIGRATIONS_DIR"
-
-if [ ! -f "$TRACKED_FILES_PATH" ]
+if [ $# -lt 1 ]
 then
-  touch "$TRACKED_FILES_PATH"
+  print_help
+  exit 2
 fi
 
-if [ ! -d "$MIRROR_DIR/.git" ]
-then
-  print_status "Initializing mirror git instance"
-
-  ${GIT[@]} init
-  ${GIT[@]} config user.name "$USER"
-  ${GIT[@]} config user.email "$USER@$HOSTNAME"
-  ${GIT[@]} config commit.gpgsign "false"
-  ${GIT[@]} commit --allow-empty -m "Initial commit"
-fi
-
-for migration in $(ls -1 $MIGRATIONS_DIR)
-do
-  print_status "Performing migration $migration"
-
-  if [ -f "$PERFORMED_MIGRATIONS_DIR/$migration" ]
-  then
-    echo "Migration already performed. Skipping."
-    continue
-  fi
-
-  perform_migration "$migration"
-
-  touch "$PERFORMED_MIGRATIONS_DIR/$migration"
-done
+case "$1" in
+  run)
+    perform_migrations
+    ;;
+  help)
+    print_help
+    ;;
+  reset)
+    reset
+    ;;
+  *)
+    echo "Unknown subcommand $1."
+    echo "Run $0 help to list available commands."
+    exit 2
+esac
