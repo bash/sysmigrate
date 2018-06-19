@@ -30,13 +30,24 @@ perform_migration() {
   local migration="$1"
   local patch="$MIGRATIONS_DIR/$migration/migration.patch"
   local script="$MIGRATIONS_DIR/$migration/migration.sh"
+  local files_dir="$MIGRATIONS_DIR/$migration/files"
 
   if [ -f "$patch" ]
   then
     ${GIT[@]} apply $patch
     ${GIT[@]} add --all
-    ${GIT[@]} commit -m "Apply migration $migration"
+    ${GIT[@]} commit -m "Apply patch for migration $migration"
+  fi
 
+  if [ -d "$files_dir" ]
+  then
+    cp -R -- "$files_dir/." "$MIRROR_DIR/"
+    ${GIT[@]} add --all
+    ${GIT[@]} commit -m "Add files for migration $migration"
+  fi
+
+  if [ -d "$files_dir" ] || [ -f "$patch" ]
+  then
     while IFS= read -r -d '' filename
     do
       rm -- "$SYSMIGRATE_PREFIX/$filename"
