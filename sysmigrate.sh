@@ -1,7 +1,7 @@
 #!/bin/bash -e
 
-RUNTIME_DIR="$SYSMIGRATE_PREFIX/var/lib/sysmigrate"
-CONFIG_DIR="$SYSMIGRATE_PREFIX/etc/sysmigrate"
+RUNTIME_DIR="$SYSMIGRATE_PREFIX/usr/local/var/lib/sysmigrate"
+CONFIG_DIR="$SYSMIGRATE_PREFIX/usr/local/etc/sysmigrate"
 
 MIGRATIONS_DIR="$CONFIG_DIR/migrations"
 TRACKED_FILES_PATH="$RUNTIME_DIR/tracked-files"
