@@ -73,7 +73,7 @@ perform_migrations() {
 
   trap cleanup EXIT
 
-  find -type d -depth 1 -print0 "$MIGRATIONS_DIR" | while IFS= read -r -d '' filename
+  find "$MIGRATIONS_DIR" -type d -maxdepth 1 -print0 | while IFS= read -r -d '' filename
   do
     local migration=$(basename "$filename")
 
